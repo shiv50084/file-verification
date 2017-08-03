@@ -5,7 +5,7 @@ export INC_DIRS := $(CUR_DIR)/include
 export SRC_DIRS := $(CUR_DIR)/src
 
 export CC := clang
-export C_FLAGS := -std=c11
+export C_FLAGS := -std=c11 -Wall
 
 TEST_DIR := tests/
 

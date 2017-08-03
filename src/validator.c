@@ -20,12 +20,9 @@
 static BIO *read_certificate(const char *cert_name);
 static void free_certificate(BIO *certbio);
 static X509 *get_certificate_info(BIO *certbio);
-static void free_certificate_info(X509 *cert_info);
 static EVP_PKEY *get_public_key(X509 *cert_info);
-static void free_public_key(EVP_PKEY *pkey);
 static int verify_file(const char *file, const char *signature, BIO *certbio);
 static char *read_signature(const char *signature, long *length);
-static void free_signature_buffer(char *buf);
 static long get_file_size(FILE *filp);
 static int read_file_to_verify(const char *fname, EVP_MD_CTX *mdctx);
 
@@ -111,14 +108,6 @@ static X509 *get_certificate_info(BIO *certbio)
     return cert_info;
 }
 
-static void free_certificate_info(X509 *cert_info)
-{
-    if (cert_info != NULL)
-    {
-        X509_free(cert_info);
-    }
-}
-
 static EVP_PKEY *get_public_key(X509 *cert_info)
 {
     EVP_PKEY *pkey = X509_get_pubkey(cert_info);
@@ -131,14 +120,6 @@ static EVP_PKEY *get_public_key(X509 *cert_info)
     }
 
     return pkey;
-}
-
-static void free_public_key(EVP_PKEY *pkey)
-{
-    if (pkey != NULL)
-    {
-        EVP_PKEY_free(pkey);
-    }
 }
 
 static int verify_file(const char *file, const char *signature, BIO *certbio)
@@ -218,6 +199,7 @@ static char *read_signature(const char *signature, long *length)
     if (signature_file == NULL)
     {
         printf("Cannot open file: %s\n", signature);
+        fclose(signature_file);
 
         return NULL;
     }
@@ -227,6 +209,9 @@ static char *read_signature(const char *signature, long *length)
     if (file_size < 0)
     {
         printf("Cannot determine size of file %s\n", signature);
+        fclose(signature_file);
+
+        return NULL;
     }
     
     char *buf = calloc(file_size, sizeof(char));
@@ -251,21 +236,15 @@ static char *read_signature(const char *signature, long *length)
 
         free(buf);
         *length = 0;
+        fclose(signature_file);
 
         return NULL;
     }
 
+    fclose(signature_file);
     *length = file_size;
 
     return buf;
-}
-
-static void free_signature_buffer(char *buf)
-{
-    if (buf != NULL)
-    {
-        free(buf);
-    }
 }
 
 static long get_file_size(FILE *filp)
@@ -312,6 +291,7 @@ static int read_file_to_verify(const char *fname, EVP_MD_CTX *mdctx)
         if (EVP_DigestUpdate(mdctx, fbuf, read_bytes) != 1)
         {
             printf("Cannot update verificator object\n");
+            fclose(fverif);
 
             return -1;
         }
@@ -321,6 +301,8 @@ static int read_file_to_verify(const char *fname, EVP_MD_CTX *mdctx)
     {
         printf("Error during reading of %s occured\n", fname);
     }
+
+    fclose(fverif);
 
     return 0;
 }
