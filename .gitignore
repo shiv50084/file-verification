@@ -2,3 +2,6 @@
 **/*.o
 # VS Code
 **/.vscode/
+# OpenSSL certificates/keys
+**/*.sha256
+**/*.pem
