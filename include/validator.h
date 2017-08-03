@@ -10,11 +10,12 @@
 enum verification_result_t {
     FW_BUF_ERR,
     FW_VALID,
-    FW_INVALID
+    FW_INVALID,
+    FW_BAD_CERT
 };
 
 enum verification_result_t firmware_verify_file(const char *file, 
                                                 const char *signature_file, 
-                                                const char *pubkey);
+                                                const char *certificate);
 
 #endif /* _FIRMWARE_VALIDATOR_H_ */
