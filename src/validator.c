@@ -21,8 +21,10 @@ static BIO *read_certificate(const char *cert_name);
 static void free_certificate(BIO *certbio);
 static X509 *get_certificate_info(BIO *certbio);
 static EVP_PKEY *get_public_key(X509 *cert_info);
-static int verify_file(const char *file, const char *signature, BIO *certbio);
+static int verify_file(const char *file, const char *signature, long length,
+                       BIO *certbio);
 static char *read_signature(const char *signature, long *length);
+static void free_signature(char *buf);
 static long get_file_size(FILE *filp);
 static int read_file_to_verify(const char *fname, EVP_MD_CTX *mdctx);
 
@@ -45,19 +47,46 @@ enum verification_result_t firmware_verify_file(const char *file,
     OpenSSL_add_all_digests();
 
     BIO *certbio = read_certificate(certificate);
+    long length = 0;
+    char *sign_buf = read_signature(signature_file, &length);
     enum verification_result_t retval = FW_INVALID;
 
-    if (certbio != NULL) {
-        retval = (verify_file(file, signature_file, certbio) == 1) ? FW_VALID
-                                                                   : FW_INVALID;
+    if (certbio != NULL && sign_buf != NULL) {
+        retval = (verify_file(file, sign_buf, length, certbio) == 1)
+                     ? FW_VALID
+                     : FW_INVALID;
     }
     else {
         retval = FW_BAD_CERT;
     }
 
+    free_signature(sign_buf);
     free_certificate(certbio);
 
     return retval;
+}
+
+enum verification_result_t firmware_verify_file_sign_buf(
+    const char *file, const char *signature, long length,
+    const char *certificate)
+{
+    // add digests as we use digest look up features
+    OpenSSL_add_all_digests();
+
+    BIO *certbio = read_certificate(certificate);
+
+    if (certbio != NULL && sign_buf != NULL) {
+        retval = (verify_file(file, signature, length, certbio) == 1)
+                     ? FW_VALID
+                     : FW_INVALID;
+    }
+    else {
+        retval = FW_BAD_CERT;
+    }
+
+    free_signature(sign_buf);
+
+    return FW_INVALID;
 }
 
 /************************************************
@@ -117,7 +146,8 @@ static EVP_PKEY *get_public_key(X509 *cert_info)
     return pkey;
 }
 
-static int verify_file(const char *file, const char *signature, BIO *certbio)
+static int verify_file(const char *file, const char *signature, long length,
+                       BIO *certbio)
 {
     X509 *cert = get_certificate_info(certbio);
 
@@ -155,24 +185,12 @@ static int verify_file(const char *file, const char *signature, BIO *certbio)
         return -1;
     }
 
-    long sign_size = 0;
-    char *sign_buf = read_signature(signature, &sign_size);
-
-    if (sign_buf == NULL) {
-        EVP_MD_CTX_destroy(mdctx);
-        EVP_PKEY_free(pkey);
-        X509_free(cert);
-
-        return -1;
-    }
-
     int retval =
-        EVP_DigestVerifyFinal(mdctx, (unsigned char *)sign_buf, sign_size);
+        EVP_DigestVerifyFinal(mdctx, (unsigned char *)signature, length);
 
     EVP_MD_CTX_destroy(mdctx);
     EVP_PKEY_free(pkey);
     X509_free(cert);
-    free(sign_buf);
 
     return retval;
 }
@@ -231,6 +249,13 @@ static char *read_signature(const char *signature, long *length)
     *length = file_size;
 
     return buf;
+}
+
+static void free_signature(char *buf)
+{
+    if (buf != NULL) {
+        free(buf);
+    }
 }
 
 static long get_file_size(FILE *filp)
