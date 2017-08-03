@@ -1,0 +1,4 @@
+# C/C++ output
+**/*.o
+# VS Code
+**/.vscode/
