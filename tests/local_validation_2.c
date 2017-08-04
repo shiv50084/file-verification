@@ -22,7 +22,7 @@ int main()
     assert(sign_buf);
     assert(is_valid == FW_VALID);
     // test incorrect file
-    is_valid = firmware_verify_file(file1_sign, file1_sign, cert);
+    is_valid = firmware_verify_file_sign_buf(file1_sign, sign_buf, length, cert);
     assert(is_valid == FW_INVALID);
     printf("Pass [Local validation with external signature buffer] test\n");
 
