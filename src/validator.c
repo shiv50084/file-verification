@@ -72,10 +72,11 @@ enum verification_result_t firmware_verify_file_sign_buf(
 {
     // add digests as we use digest look up features
     OpenSSL_add_all_digests();
-
+    
+    enum verification_result_t retval = FW_INVALID;
     BIO *certbio = read_certificate(certificate);
 
-    if (certbio != NULL && sign_buf != NULL) {
+    if (certbio != NULL && signature != NULL) {
         retval = (verify_file(file, signature, length, certbio) == 1)
                      ? FW_VALID
                      : FW_INVALID;
@@ -84,9 +85,9 @@ enum verification_result_t firmware_verify_file_sign_buf(
         retval = FW_BAD_CERT;
     }
 
-    free_signature(sign_buf);
+    free_certificate(certbio);
 
-    return FW_INVALID;
+    return retval;
 }
 
 /************************************************
