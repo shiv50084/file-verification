@@ -72,7 +72,7 @@ enum verification_result_t firmware_verify_file_sign_buf(
 {
     // add digests as we use digest look up features
     OpenSSL_add_all_digests();
-    
+
     enum verification_result_t retval = FW_INVALID;
     BIO *certbio = read_certificate(certificate);
 
